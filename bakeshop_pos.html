@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bakeshop POS - Filipino Style</title>
+    <style>
+        :root {
+            --primary: #d35400; /* Burnt Orange */
+            --secondary: #f39c12; /* Golden Yellow */
+            --bg: #fdf6e3; /* Creamy White */
+            --text: #2c3e50;
+            --white: #ffffff;
+            --danger: #e74c3c;
+            --success: #27ae60;
+        }
+
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background-color: var(--bg); color: var(--text); }
+        
+        /* Layout */
+        .container { max-width: 1200px; margin: 0 auto; padding: 10px; }
+        .header { background-color: var(--primary); color: var(--white); padding: 15px; display: flex; justify-content: space-between; align-items: center; border-radius: 8px; margin-bottom: 15px; }
+        .shift-badge { background: var(--secondary); color: var(--text); padding: 5px 10px; border-radius: 4px; font-weight: bold; }
+        
+        /* Login Screen */
+        #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); display: flex; justify-content: center; align-items: center; z-index: 1000; }
+        .login-box { background: var(--white); padding: 30px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; width: 300px; }
+        input, select, button { padding: 10px; margin: 5px 0; width: 100%; box-sizing: border-box; border-radius: 5px; border: 1px solid #ccc; }
+        button { cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .btn-primary { background-color: var(--primary); color: white; border: none; }
+        .btn-secondary { background-color: var(--secondary); color: var(--text); border: none; }
+        .btn-danger { background-color: var(--danger); color: white; border: none; }
+        .btn-success { background-color: var(--success); color: white; border: none; }
+
+        /* Main Dashboard */
+        .dashboard-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 15px; }
+        @media (max-width: 768px) { .dashboard-grid { grid-template-columns: 1fr; } }
+
+        .card { background: var(--white); padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 15px; }
+        .card h3 { margin-top: 0; border-bottom: 2px solid var(--bg); padding-bottom: 10px; color: var(--primary); }
+
+        /* Inventory Table */
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background-color: #f8f9fa; }
+        .pullout-btn { background-color: var(--danger); color: white; padding: 5px 10px; font-size: 0.8em; border: none; border-radius: 3px; cursor: pointer; }
+        .stock-low { color: var(--danger); font-weight: bold; }
+
+        /* Cart / Sales */
+        .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px dashed #ddd; }
+        .total-section { font-size: 1.5em; font-weight: bold; text-align: right; margin-top: 15px; color: var(--primary); }
+
+        /* Admin Modal */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; }
+        .modal-content { background: var(--white); margin: 5% auto; padding: 20px; width: 80%; max-width: 600px; border-radius: 8px; max-height: 80vh; overflow-y: auto; }
+        .close { float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+
+        /* Settings & Logs */
+        .settings-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #eee; }
+        .log-entry { font-size: 0.9em; color: #666; margin-bottom: 5px; }
+
+        /* Utilities */
+        .hidden { display: none !important; }
+        .badge { padding: 2px 6px; border-radius: 4px; font-size: 0.8em; }
+        .badge-morning { background: #ffeaa7; color: #d35400; }
+        .badge-afternoon { background: #dfe6e9; color: #2c3e50; }
+    </style>
+</head>
+<body>
+
+    <!-- LOGIN SCREEN -->
+    <div id="login-screen">
+        <div class="login-box">
+            <h2>Bakeshop POS</h2>
+            <p>Select Role</p>
+            <button onclick="showLoginInput('attendant')" class="btn-secondary">Attendant (Morning/Afternoon)</button>
+            <button onclick="showLoginInput('admin')" class="btn-primary">Admin</button>
+            
+            <div id="attendant-login-form" class="hidden" style="margin-top:15px;">
+                <input type="text" id="attendant-user" placeholder="Username (e.g., Maria)">
+                <input type="password" id="attendant-pass" placeholder="Password">
+                <select id="attendant-shift">
+                    <option value="morning">Morning Shift (5am - 2pm)</option>
+                    <option value="afternoon">Afternoon Shift (2pm - 11pm)</option>
+                </select>
+                <button onclick="loginAttendant()" class="btn-primary">Login</button>
+                <button onclick="hideLoginForms()" class="btn-secondary">Cancel</button>
+            </div>
+
+            <div id="admin-login-form" class="hidden" style="margin-top:15px;">
+                <input type="password" id="admin-pin" placeholder="Enter Admin PIN">
+                <button onclick="loginAdmin()" class="btn-primary">Unlock Admin</button>
+                <button onclick="hideLoginForms()" class="btn-secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN APP INTERFACE -->
+    <div id="app-interface" class="hidden">
+        <div class="container">
+            <div class="header">
+                <div>
+                    <h2 style="margin:0;">🍞 Bakeshop POS</h2>
+                    <small id="current-date"></small>
+                </div>
+                <div style="text-align: right;">
+                    <span id="user-display" class="badge badge-morning">User</span>
+                    <button onclick="logout()" style="width: auto; padding: 5px 10px; margin-left: 10px; background: transparent; border: 1px solid white; color: white;">Logout</button>
+                    <button onclick="openSettings()" id="admin-settings-btn" class="hidden" style="width: auto; padding: 5px 10px; margin-left: 5px; background: var(--secondary); border: none; color: black;">⚙️ Settings</button>
+                </div>
+            </div>
+
+            <!-- DASHBOARD GRID -->
+            <div class="dashboard-grid">
+                
+                <!-- LEFT: INVENTORY & SALES -->
+                <div class="left-panel">
+                    
+                    <!-- Start Day Section (Morning Only) -->
+                    <div id="start-day-section" class="card hidden">
+                        <h3>🌅 Morning Shift Start</h3>
+                        <p>Add leftover bread from yesterday:</p>
+                        <div style="display: flex; gap: 10px;">
+                            <select id="start-bread-select"></select>
+                            <input type="number" id="start-bread-qty" placeholder="Qty" min="0">
+                            <button onclick="addStartInventory()" class="btn-primary" style="width: auto;">Add Leftover</button>
+                        </div>
+                        <p><small>Click "End Shift" at 2PM to transfer stock to Afternoon.</small></p>
+                        <button onclick="endMorningShift()" class="btn-secondary" style="margin-top: 10px;">End Morning Shift & Transfer Stock</button>
+                    </div>
+
+                    <!-- Inventory List -->
+                    <div class="card">
+                        <h3>📦 Daily Inventory</h3>
+                        <table id="inventory-table">
+                            <thead>
+                                <tr>
+                                    <th>Bread Name</th>
+                                    <th>Baked Qty</th>
+                                    <th>Sold</th>
+                                    <th>Leftover</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inventory-body"></tbody>
+                        </table>
+                    </div>
+
+                    <!-- Today's Sales Log -->
+                    <div class="card">
+                        <h3>💰 Today's Transactions</h3>
+                        <div id="sales-log" style="max-height: 150px; overflow-y: auto;"></div>
+                    </div>
+                </div>
+
+                <!-- RIGHT: POINT OF SALE -->
+                <div class="right-panel">
+                    <div class="card">
+                        <h3>🛒 New Sale</h3>
+                        <select id="pos-bread-select" onchange="updatePriceDisplay()"></select>
+                        <div style="display: flex; gap: 10px; margin-top: 10px;">
+                            <input type="number" id="pos-qty" placeholder="Qty" min="1" value="1">
+                            <button onclick="addToCart()" class="btn-primary">Add to Cart</button>
+                        </div>
+                        <div id="price-display" style="margin-top: 5px; color: #666; font-size: 0.9em;"></div>
+
+                        <div id="cart-items" style="margin-top: 15px; max-height: 200px; overflow-y: auto;">
+                            <!-- Cart items go here -->
+                        </div>
+
+                        <div class="total-section">
+                            Total: ₱<span id="cart-total">0.00</span>
+                        </div>
+                        <button onclick="processSale()" class="btn-success" style="width: 100%; margin-top: 10px; font-size: 1.2em;">✅ Complete Sale</button>
+                    </div>
+
+                    <!-- Shift Summary -->
+                    <div class="card">
+                        <h3>📊 Shift Summary</h3>
+                        <p>Morning Sales: <strong>₱<span id="morning-sales-total">0.00</span></strong></p>
+                        <p>Afternoon Sales: <strong>₱<span id="afternoon-sales-total">0.00</span></strong></p>
+                        <hr>
+                        <p>Grand Total (Day): <strong>₱<span id="grand-total-sales">0.00</span></strong></p>
+                        
+                        <div id="shift-controls" style="margin-top: 15px;">
+                            <button onclick="endorseShift()" id="btn-endorse" class="btn-secondary">Endorse Shift</button>
+                            <button onclick="acknowledgeShift()" id="btn-acknowledge" class="btn-primary hidden">Acknowledge & Open</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer Info -->
+            <div style="text-align: center; margin-top: 20px; color: #888; font-size: 0.8em;">
+                Offline Mode Active | Auto-sync when online (Weekly Email)
+            </div>
+        </div>
+    </div>
+
+    <!-- ADMIN SETTINGS MODAL -->
+    <div id="settings-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeSettings()">&times;</span>
+            <h2>⚙️ Admin Settings</h2>
+            
+            <div class="tab-buttons">
+                <button onclick="switchTab('products')" class="btn-secondary">Products</button>
+                <button onclick="switchTab('employees')" class="btn-secondary">Employees</button>
+                <button onclick="switchTab('logs')" class="btn-secondary">Logs & Reports</button>
+            </div>
+
+            <div id="tab-products" class="tab-content">
+                <h3>Manage Products</h3>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="new-prod-name" placeholder="Bread Name (e.g., Pandesal)">
+                    <input type="number" id="new-prod-price" placeholder="Price (₱)" step="0.01">
+                    <button onclick="addProduct()" class="btn-primary" style="width: auto;">Add Product</button>
+                </div>
+                <ul id="admin-product-list" style="list-style: none; padding: 0;"></ul>
+            </div>
+
+            <div id="tab-employees" class="tab-content hidden">
+                <h3>Manage Employees</h3>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="new-emp-name" placeholder="Name">
+                    <input type="text" id="new-emp-pass" placeholder="Password">
+                    <button onclick="addEmployee()" class="btn-primary" style="width: auto;">Add Employee</button>
+                </div>
+                <ul id="admin-employee-list" style="list-style: none; padding: 0;"></ul>
+            </div>
+
+            <div id="tab-logs" class="tab-content hidden">
+                <h3>System Logs & Weekly Report</h3>
+                <button onclick="generateWeeklyCSV()" class="btn-primary">Download Weekly CSV Report</button>
+                <button onclick="resetDailyData()" class="btn-danger" style="margin-top: 10px;">Reset All Data (New Day)</button>
+                <div id="admin-logs-list" style="margin-top: 15px; max-height: 200px; overflow-y: auto; background: #f9f9f9; padding: 10px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- DATA STRUCTURES & STATE ---
+        const DB_KEY = 'bakeshop_pos_db';
+        let db = {
+            products: [],
+            employees: [],
+            currentShift: 'morning', // 'morning' or 'afternoon'
+            shiftStatus: 'open', // 'open', 'endorsed', 'acknowledged'
+            inventory: {}, // { productId: { baked: 0, sold: 0, pulledOut: 0 } }
+            sales: [], // { id, date, items: [], total, shift, attendant }
+            logs: [],
+            adminPin: '1234' // Default PIN
+        };
+
+        let currentUser = null;
+        let cart = [];
+
+        // --- INITIALIZATION ---
+        window.onload = function() {
+            loadDB();
+            updateDate();
+            setInterval(updateDate, 60000);
+            
+            // Check if there's an active session
+            const session = sessionStorage.getItem('currentUser');
+            if(session) {
+                currentUser = JSON.parse(session);
+                showApp();
+            }
+        };
+
+        function updateDate() {
+            const now = new Date();
+            document.getElementById('current-date').innerText = now.toLocaleDateString('en-PH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute:'2-digit' });
+        }
+
+        function loadDB() {
+            const saved = localStorage.getItem(DB_KEY);
+            if(saved) {
+                db = JSON.parse(saved);
+            } else {
+                // Seed default data if first time
+                seedDefaultData();
+            }
+        }
+
+        function saveDB() {
+            localStorage.setItem(DB_KEY, JSON.stringify(db));
+            renderAll();
+        }
+
+        function seedDefaultData() {
+            // Default Products
+            const defaults = [
+                { id: 1, name: 'Pandesal', price: 10 },
+                { id: 2, name: 'Whole Wheat Bread', price: 45 },
+                { id: 3, name: 'French Bread', price: 35 },
+                { id: 4, name: 'Chocolate Bread', price: 15 },
+                { id: 5, name: 'Pan de Sal (Special)', price: 12 }
+            ];
+            db.products = defaults;
+            
+            // Init Inventory
+            db.inventory = {};
+            defaults.forEach(p => {
+                db.inventory[p.id] = { baked: 0, sold: 0, pulledOut: 0 };
+            });
+
+            // Default Admin
+            db.adminPin = '1234';
+            db.employees = [
+                { id: 1, name: 'Maria', pass: 'maria123', role: 'attendant' },
+                { id: 2, name: 'Juan', pass: 'juan123', role: 'attendant' }
+            ];
+
+            saveDB();
+        }
+
+        // --- AUTHENTICATION ---
+        function showLoginInput(type) {
+            document.getElementById('attendant-login-form').classList.add('hidden');
+            document.getElementById('admin-login-form').classList.add('hidden');
+            if(type === 'attendant') document.getElementById('attendant-login-form').classList.remove('hidden');
+            else document.getElementById('admin-login-form').classList.remove('hidden');
+        }
+
+        function hideLoginForms() {
+            document.getElementById('attendant-login-form').classList.add('hidden');
+            document.getElementById('admin-login-form').classList.add('hidden');
+        }
+
+        function loginAttendant() {
+            const user = document.getElementById('attendant-user').value;
+            const pass = document.getElementById('attendant-pass').value;
+            const shift = document.getElementById('attendant-shift').value;
+            
+            const emp = db.employees.find(e => e.name.toLowerCase() === user.toLowerCase() && e.pass === pass);
+            if(emp) {
+                currentUser = { ...emp, shift: shift };
+                sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
+                showApp();
+            } else {
+                alert('Invalid credentials');
+            }
+        }
+
+        function loginAdmin() {
+            const pin = document.getElementById('admin-pin').value;
+            if(pin === db.adminPin) {
+                currentUser = { name: 'Admin', role: 'admin', shift: 'all' };
+                sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
+                showApp();
+            } else {
+                alert('Incorrect PIN');
+            }
+        }
+
+        function logout() {
+            currentUser = null;
+            sessionStorage.removeItem('currentUser');
+            document.getElementById('login-screen').classList.remove('hidden');
+            document.getElementById('app-interface').classList.add('hidden');
+            hideLoginForms();
+        }
+
+        function showApp() {
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('app-interface').classList.remove('hidden');
+            document.getElementById('user-display').innerText = `${currentUser.name} (${currentUser.shift || 'Admin'})`;
+            
+            // Show settings button only for admin
+            if(currentUser.role === 'admin') {
+                document.getElementById('admin-settings-btn').classList.remove('hidden');
+            } else {
+                document.getElementById('admin-settings-btn').classList.add('hidden');
+            }
+
+            // Handle Shift Logic UI
+            handleShiftUI();
+            renderAll();
+        }
+
+        function handleShiftUI() {
+            const startSection = document.getElementById('start-day-section');
+            const endorseBtn = document.getElementById('btn-endorse');
+            const ackBtn = document.getElementById('btn-acknowledge');
+
+            // Reset visibility
+            startSection.classList.add('hidden');
+            endorseBtn.classList.remove('hidden');
+            ackBtn.classList.add('hidden');
+
+            if(currentUser.role === 'admin') return; // Admin sees everything
+
+            if(currentUser.shift === 'morning') {
+                // Morning shift starts with empty inventory unless they add leftovers
+                // If inventory is empty, show start section
+                const hasStock = Object.values(db.inventory).some(i => i.baked > 0);
+                if(!hasStock && db.sales.length === 0) {
+                    startSection.classList.remove('hidden');
+                }
+            } else if (currentUser.shift === 'afternoon') {
+                // Afternoon shift acknowledges morning shift
+                if(db.shiftStatus === 'endorsed') {
+                    ackBtn.classList.remove('hidden');
+                } else if (db.shiftStatus === 'acknowledged') {
+                    // Already open, just sell
+                }
+            }
+        }
+
+        // --- CORE FUNCTIONS ---
+
+        function addStartInventory() {
+            const prodId = parseInt(document.getElementById('start-bread-select').value);
+            const qty = parseInt(document.getElementById('start-bread-qty').value);
+            
+            if(prodId && qty > 0) {
+                db.inventory[prodId].baked += qty;
+                logAction(`Added ${qty} units of ${getProductName(prodId)} as leftover/baked.`);
+                saveDB();
+                document.getElementById('start-bread-qty').value = '';
+                alert('Inventory Updated!');
+            }
+        }
+
+        function endMorningShift() {
+            // Calculate totals
+            const morningSalesTotal = calculateShiftTotal('morning');
+            
+            // Endorse status
+            db.shiftStatus = 'endorsed';
+            logAction(`Morning Shift Ended by ${currentUser.name}. Total Sales: ₱${morningSalesTotal.toFixed(2)}`);
+            saveDB();
+            handleShiftUI();
+            alert(`Morning Shift Endorsed!\nTotal Sales: ₱${morningSalesTotal.toFixed(2)}\n\nPlease hand over to Afternoon Attendant.`);
+        }
+
+        function acknowledgeShift() {
+            db.shiftStatus = 'open';
+            logAction(`Afternoon Shift Acknowledged by ${currentUser.name}.`);
+            saveDB();
+            handleShiftUI();
+        }
+
+        function calculateShiftTotal(shiftType) {
+            return db.sales
+                .filter(s => s.shift === shiftType)
+                .reduce((sum, s) => sum + s.total, 0);
+        }
+
+        // --- POS LOGIC ---
+
+        function addToCart() {
+            const prodId = parseInt(document.getElementById('pos-bread-select').value);
+            const qty = parseInt(document.getElementById('pos-qty').value);
+            
+            if(!prodId || qty <= 0) return;
+
+            const product = db.products.find(p => p.id === prodId);
+            const currentStock = db.inventory[prodId].baked - db.inventory[prodId].sold - db.inventory[prodId].pulledOut;
+
+            if(currentStock < qty) {
+                alert(`Only ${currentStock} units available!`);
+                return;
+            }
+
+            cart.push({ 
+                id: Date.now(), 
+                productId: prodId, 
+                name: product.name, 
+                price: product.price, 
+                qty: qty 
+            });
+            
+            renderCart();
+        }
+
+        function renderCart() {
+            const container = document.getElementById('cart-items');
+            container.innerHTML = '';
+            let total = 0;
+
+            cart.forEach(item => {
+                const itemTotal = item.price * item.qty;
+                total += itemTotal;
+                container.innerHTML += `
+                    <div class="cart-item">
+                        <div>
+                            <strong>${item.name}</strong><br>
+                            <small>₱${item.price} x ${item.qty}</small>
+                        </div>
+                        <div>
+                            <span>₱${itemTotal.toFixed(2)}</span>
+                            <button onclick="removeFromCart(${item.id})" style="background:none; border:none; color:red; font-weight:bold;">×</button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            document.getElementById('cart-total').innerText = total.toFixed(2);
+        }
+
+        function removeFromCart(id) {
+            cart = cart.filter(item => item.id !== id);
+            renderCart();
+        }
+
+        function processSale() {
+            if(cart.length === 0) return;
+
+            const total = parseFloat(document.getElementById('cart-total').innerText);
+            
+            // Deduct inventory
+            cart.forEach(item => {
+                db.inventory[item.productId].sold += item.qty;
+            });
+
+            // Record Sale
+            const sale = {
+                id: Date.now(),
+                date: new Date().toISOString(),
+                items: [...cart],
+                total: total,
+                shift: currentUser.shift,
+                attendant: currentUser.name
+            };
+            db.sales.push(sale);
+
+            logAction(`Sale: ₱${total.toFixed(2)} by ${currentUser.name}`);
+            
+            cart = [];
+            renderCart();
+            renderAll(); // Refresh tables
+        }
+
+        // --- PULL OUT LOGIC (Recycling) ---
+        function pullOutBread(productId) {
+            const reason = prompt("Reason for Pull Out?\n1. Recycling (Pudding)\n2. Free Bread (Family/Emp)\n3. Damaged", "1");
+            
+            if(reason) {
+                db.inventory[productId].pulledOut += 1;
+                logAction(`Pull Out: 1 unit of ${getProductName(productId)}. Reason: ${reason}`);
+                saveDB();
+            }
+        }
+
+        // --- SETTINGS & ADMIN ---
+
+        function openSettings() {
+            document.getElementById('settings-modal').style.display = 'block';
+            switchTab('products');
+            renderAdminLists();
+        }
+
+        function closeSettings() {
+            document.getElementById('settings-modal').style.display = 'none';
+        }
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+        }
+
+        function addProduct() {
+            const name = document.getElementById('new-prod-name').value;
+            const price = parseFloat(document.getElementById('new-prod-price').value);
+            
+            if(name && price) {
+                const newId = Date.now();
+                db.products.push({ id: newId, name, price });
+                db.inventory[newId] = { baked: 0, sold: 0, pulledOut: 0 };
+                saveDB();
+                renderAdminLists();
+                document.getElementById('new-prod-name').value = '';
+                document.getElementById('new-prod-price').value = '';
+            }
+        }
+
+        function removeProduct(id) {
+            if(confirm('Remove this product?')) {
+                db.products = db.products.filter(p => p.id !== id);
+                delete db.inventory[id];
+                saveDB();
+                renderAdminLists();
+            }
+        }
+
+        function addEmployee() {
+            const name = document.getElementById('new-emp-name').value;
+            const pass = document.getElementById('new-emp-pass').value;
+            
+            if(name && pass) {
+                const newId = Date.now();
+                db.employees.push({ id: newId, name, pass, role: 'attendant' });
+                saveDB();
+                renderAdminLists();
+                document.getElementById('new-emp-name').value = '';
+                document.getElementById('new-emp-pass').value = '';
+            }
+        }
+
+        function removeEmployee(id) {
+            if(confirm('Remove this employee?')) {
+                db.employees = db.employees.filter(e => e.id !== id);
+                saveDB();
+                renderAdminLists();
+            }
+        }
+
+        function resetDailyData() {
+            if(confirm('Are you sure? This will clear all sales and inventory for a NEW DAY.')) {
+                db.sales = [];
+                db.inventory = {};
+                db.products.forEach(p => {
+                    db.inventory[p.id] = { baked: 0, sold: 0, pulledOut: 0 };
+                });
+                db.shiftStatus = 'open';
+                saveDB();
+                alert('Data Reset! Start fresh.');
+                location.reload();
+            }
+        }
+
+        // --- RENDERING ---
+
+        function renderAll() {
+            // Populate Selects
+            const selects = [document.getElementById('pos-bread-select'), document.getElementById('start-bread-select')];
+            selects.forEach(select => {
+                if(!select) return;
+                const currentVal = select.value;
+                select.innerHTML = '<option value="">-- Select Bread --</option>';
+                db.products.forEach(p => {
+                    select.innerHTML += `<option value="${p.id}">${p.name} (₱${p.price})</option>`;
+                });
+                select.value = currentVal;
+            });
+
+            // Render Inventory Table
+            const tbody = document.getElementById('inventory-body');
+            tbody.innerHTML = '';
+            db.products.forEach(p => {
+                const inv = db.inventory[p.id];
+                const available = inv.baked - inv.sold - inv.pulledOut;
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${p.name}</td>
+                    <td>${inv.baked}</td>
+                    <td>${inv.sold}</td>
+                    <td class="${available < 5 ? 'stock-low' : ''}">${available}</td>
+                    <td>
+                        <button class="pullout-btn" onclick="pullOutBread(${p.id})">Pull Out</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            // Render Sales Log
+            const salesLog = document.getElementById('sales-log');
+            salesLog.innerHTML = '';
+            // Show last 10 sales
+            const recentSales = db.sales.slice(-10).reverse();
+            recentSales.forEach(s => {
+                salesLog.innerHTML += `
+                    <div class="log-entry">
+                        <strong>${new Date(s.date).toLocaleTimeString()}</strong> - ₱${s.total.toFixed(2)} 
+                        <span style="font-size:0.8em; color:#888;">(${s.attendant})</span>
+                    </div>
+                `;
+            });
+
+            // Update Totals
+            const morningTotal = calculateShiftTotal('morning');
+            const afternoonTotal = calculateShiftTotal('afternoon');
+            const grandTotal = morningTotal + afternoonTotal;
+
+            document.getElementById('morning-sales-total').innerText = morningTotal.toFixed(2);
+            document.getElementById('afternoon-sales-total').innerText = afternoonTotal.toFixed(2);
+            document.getElementById('grand-total-sales').innerText = grandTotal.toFixed(2);
+        }
+
+        function renderAdminLists() {
+            // Products
+            const prodList = document.getElementById('admin-product-list');
+            prodList.innerHTML = '';
+            db.products.forEach(p => {
+                prodList.innerHTML += `
+                    <li class="settings-row">
+                        <span><strong>${p.name}</strong> - ₱${p.price}</span>
+                        <button onclick="removeProduct(${p.id})" class="btn-danger" style="width:auto;">Remove</button>
+                    </li>
+                `;
+            });
+
+            // Employees
+            const empList = document.getElementById('admin-employee-list');
+            empList.innerHTML = '';
+            db.employees.forEach(e => {
+                empList.innerHTML += `
+                    <li class="settings-row">
+                        <span><strong>${e.name}</strong> (Pass: ${e.pass})</span>
+                        <button onclick="removeEmployee(${e.id})" class="btn-danger" style="width:auto;">Remove</button>
+                    </li>
+                `;
+            });
+
+            // Logs
+            const logList = document.getElementById('admin-logs-list');
+            logList.innerHTML = '';
+            const recentLogs = db.logs.slice(-20).reverse();
+            recentLogs.forEach(l => {
+                logList.innerHTML += `<div class="log-entry">${new Date(l.timestamp).toLocaleString()}: ${l.action}</div>`;
+            });
+        }
+
+        // --- UTILITIES ---
+
+        function getProductName(id) {
+            const p = db.products.find(x => x.id == id);
+            return p ? p.name : 'Unknown';
+        }
+
+        function logAction(action) {
+            db.logs.push({ timestamp: new Date().toISOString(), action });
+            // Keep logs manageable
+            if(db.logs.length > 1000) db.logs = db.logs.slice(-500);
+            saveDB();
+        }
+
+        function updatePriceDisplay() {
+            const id = parseInt(document.getElementById('pos-bread-select').value);
+            const p = db.products.find(x => x.id == id);
+            if(p) {
+                document.getElementById('price-display').innerText = `Unit Price: ₱${p.price}`;
+            } else {
+                document.getElementById('price-display').innerText = '';
+            }
+        }
+
+        // --- EXPORT & SYNC ---
+
+        function generateWeeklyCSV() {
+            // Create CSV content
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "Date,Time,Attendant,Shift,Item,Quantity,Price,Total\n";
+            
+            db.sales.forEach(s => {
+                s.items.forEach(item => {
+                    const date = new Date(s.date).toLocaleDateString();
+                    const time = new Date(s.date).toLocaleTimeString();
+                    csvContent += `${date},${time},${s.attendant},${s.shift},${item.name},${item.qty},${item.price},${item.qty * item.price}\n`;
+                });
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `bakeshop_report_${new Date().toISOString().slice(0,10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            logAction("Generated Weekly CSV Report");
+            saveDB();
+        }
+
+        // Simulate sending email via CSV download since pure JS doesn't have SMTP
+        // In a real app, you'd use a backend service like SendGrid or Firebase Functions
+        // For this offline app, we trigger the download as the "sync" mechanism
+        
+        // Auto-check for online status and suggest sync
+        window.addEventListener('online', () => {
+            alert("You are back online! Consider downloading the weekly report to email it.");
+        });
+
+    </script>
+</body>
+</html>
