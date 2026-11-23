@@ -3,67 +3,95 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bakeshop POS - Filipino Style</title>
+    <title>Bakeshop POS - Enhanced</title>
     <style>
         :root {
-            --primary: #d35400; /* Burnt Orange */
-            --secondary: #f39c12; /* Golden Yellow */
-            --bg: #fdf6e3; /* Creamy White */
+            --primary: #d35400; 
+            --secondary: #f39c12; 
+            --bg: #fdf6e3; 
             --text: #2c3e50;
             --white: #ffffff;
             --danger: #e74c3c;
             --success: #27ae60;
+            --gcash: #007bff;
         }
 
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background-color: var(--bg); color: var(--text); }
         
         /* Layout */
         .container { max-width: 1200px; margin: 0 auto; padding: 10px; }
-        .header { background-color: var(--primary); color: var(--white); padding: 15px; display: flex; justify-content: space-between; align-items: center; border-radius: 8px; margin-bottom: 15px; }
-        .shift-badge { background: var(--secondary); color: var(--text); padding: 5px 10px; border-radius: 4px; font-weight: bold; }
+        .header { background-color: var(--primary); color: var(--white); padding: 15px; display: flex; justify-content: space-between; align-items: center; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .shift-badge { background: var(--secondary); color: var(--text); padding: 5px 10px; border-radius: 4px; font-weight: bold; font-size: 0.9em; }
         
         /* Login Screen */
         #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); display: flex; justify-content: center; align-items: center; z-index: 1000; }
-        .login-box { background: var(--white); padding: 30px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; width: 300px; }
-        input, select, button { padding: 10px; margin: 5px 0; width: 100%; box-sizing: border-box; border-radius: 5px; border: 1px solid #ccc; }
+        .login-box { background: var(--white); padding: 30px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; width: 320px; }
+        input, select, button { padding: 10px; margin: 5px 0; width: 100%; box-sizing: border-box; border-radius: 5px; border: 1px solid #ccc; font-size: 1em; }
         button { cursor: pointer; font-weight: bold; transition: 0.2s; }
         .btn-primary { background-color: var(--primary); color: white; border: none; }
+        .btn-primary:hover { background-color: #a04000; }
         .btn-secondary { background-color: var(--secondary); color: var(--text); border: none; }
         .btn-danger { background-color: var(--danger); color: white; border: none; }
         .btn-success { background-color: var(--success); color: white; border: none; }
+        .btn-gcash { background-color: var(--gcash); color: white; border: none; }
+        .btn-small { width: auto; padding: 5px 10px; font-size: 0.8em; }
 
         /* Main Dashboard */
         .dashboard-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 15px; }
         @media (max-width: 768px) { .dashboard-grid { grid-template-columns: 1fr; } }
 
-        .card { background: var(--white); padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 15px; }
-        .card h3 { margin-top: 0; border-bottom: 2px solid var(--bg); padding-bottom: 10px; color: var(--primary); }
+        .card { background: var(--white); padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 15px; border: 1px solid #eee; }
+        .card h3 { margin-top: 0; border-bottom: 2px solid var(--bg); padding-bottom: 10px; color: var(--primary); display: flex; justify-content: space-between; align-items: center; }
 
         /* Inventory Table */
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; }
-        th { background-color: #f8f9fa; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.95em; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; vertical-align: middle; }
+        th { background-color: #f8f9fa; font-weight: 600; }
+        
+        .editable-qty { 
+            background: #fff; border: 1px solid #ddd; padding: 4px; width: 60px; text-align: center; 
+            cursor: pointer; border-radius: 4px;
+        }
+        .editable-qty:focus { border-color: var(--primary); outline: none; }
+
         .pullout-btn { background-color: var(--danger); color: white; padding: 5px 10px; font-size: 0.8em; border: none; border-radius: 3px; cursor: pointer; }
         .stock-low { color: var(--danger); font-weight: bold; }
 
         /* Cart / Sales */
         .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px dashed #ddd; }
-        .total-section { font-size: 1.5em; font-weight: bold; text-align: right; margin-top: 15px; color: var(--primary); }
+        .subtotal-row { font-size: 0.9em; color: #666; margin-left: 10px; margin-bottom: 2px; }
+        
+        .total-section { font-size: 1.2em; font-weight: bold; text-align: right; margin-top: 15px; color: var(--primary); border-top: 2px solid #eee; padding-top: 10px; }
+        
+        .payment-section { margin-top: 15px; background: #f9f9f9; padding: 10px; border-radius: 5px; }
+        .payment-methods { display: flex; gap: 10px; margin-bottom: 10px; }
+        .payment-methods button { flex: 1; }
+        
+        .receipt-details { font-size: 0.9em; margin-top: 10px; }
+        .change-display { font-size: 1.1em; color: var(--success); font-weight: bold; margin-top: 5px; }
 
         /* Admin Modal */
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; }
-        .modal-content { background: var(--white); margin: 5% auto; padding: 20px; width: 80%; max-width: 600px; border-radius: 8px; max-height: 80vh; overflow-y: auto; }
-        .close { float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; overflow-y: auto; }
+        .modal-content { background: var(--white); margin: 5% auto; padding: 20px; width: 90%; max-width: 700px; border-radius: 8px; }
+        .close { float: right; font-size: 28px; font-weight: bold; cursor: pointer; color: #aaa; }
+        .close:hover { color: black; }
 
-        /* Settings & Logs */
+        /* Tabs & Forms */
+        .tab-buttons { display: flex; gap: 5px; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .tab-buttons button { width: auto; flex: 1; margin: 0; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        
         .settings-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #eee; }
-        .log-entry { font-size: 0.9em; color: #666; margin-bottom: 5px; }
+        .log-entry { font-size: 0.85em; color: #666; margin-bottom: 5px; border-bottom: 1px dotted #eee; padding-bottom: 2px; }
 
         /* Utilities */
         .hidden { display: none !important; }
         .badge { padding: 2px 6px; border-radius: 4px; font-size: 0.8em; }
         .badge-morning { background: #ffeaa7; color: #d35400; }
         .badge-afternoon { background: #dfe6e9; color: #2c3e50; }
+        
+        .new-batch-section { background: #fff3cd; padding: 10px; border-radius: 5px; margin-bottom: 10px; border: 1px solid #ffeeba; }
     </style>
 </head>
 <body>
@@ -71,26 +99,25 @@
     <!-- LOGIN SCREEN -->
     <div id="login-screen">
         <div class="login-box">
-            <h2>Bakeshop POS</h2>
+            <h2>🍞 Bakeshop POS</h2>
             <p>Select Role</p>
-            <button onclick="showLoginInput('attendant')" class="btn-secondary">Attendant (Morning/Afternoon)</button>
+            <button onclick="showLoginInput('attendant')" class="btn-secondary">Attendant</button>
             <button onclick="showLoginInput('admin')" class="btn-primary">Admin</button>
             
             <div id="attendant-login-form" class="hidden" style="margin-top:15px;">
-                <input type="text" id="attendant-user" placeholder="Username (e.g., Maria)">
+                <input type="text" id="attendant-user" placeholder="Username">
                 <input type="password" id="attendant-pass" placeholder="Password">
-                <select id="attendant-shift">
-                    <option value="morning">Morning Shift (5am - 2pm)</option>
-                    <option value="afternoon">Afternoon Shift (2pm - 11pm)</option>
-                </select>
-                <button onclick="loginAttendant()" class="btn-primary">Login</button>
-                <button onclick="hideLoginForms()" class="btn-secondary">Cancel</button>
+                <!-- Shift selection is dynamic based on user role/assignment if needed, but here we let them pick or default -->
+                <label style="display:block; text-align:left; margin-top:5px; font-size:0.9em;">Select Shift:</label>
+                <select id="attendant-shift-select"></select>
+                <button onclick="loginAttendant()" class="btn-primary" style="margin-top:10px;">Login</button>
+                <button onclick="hideLoginForms()" class="btn-secondary" style="margin-top:5px;">Cancel</button>
             </div>
 
             <div id="admin-login-form" class="hidden" style="margin-top:15px;">
                 <input type="password" id="admin-pin" placeholder="Enter Admin PIN">
-                <button onclick="loginAdmin()" class="btn-primary">Unlock Admin</button>
-                <button onclick="hideLoginForms()" class="btn-secondary">Cancel</button>
+                <button onclick="loginAdmin()" class="btn-primary" style="margin-top:10px;">Unlock Admin</button>
+                <button onclick="hideLoginForms()" class="btn-secondary" style="margin-top:5px;">Cancel</button>
             </div>
         </div>
     </div>
@@ -100,13 +127,13 @@
         <div class="container">
             <div class="header">
                 <div>
-                    <h2 style="margin:0;">🍞 Bakeshop POS</h2>
+                    <h2 style="margin:0;">Bakeshop POS</h2>
                     <small id="current-date"></small>
                 </div>
                 <div style="text-align: right;">
                     <span id="user-display" class="badge badge-morning">User</span>
-                    <button onclick="logout()" style="width: auto; padding: 5px 10px; margin-left: 10px; background: transparent; border: 1px solid white; color: white;">Logout</button>
-                    <button onclick="openSettings()" id="admin-settings-btn" class="hidden" style="width: auto; padding: 5px 10px; margin-left: 5px; background: var(--secondary); border: none; color: black;">⚙️ Settings</button>
+                    <button onclick="logout()" class="btn-small" style="background: transparent; border: 1px solid white; color: white; margin-left: 10px;">Logout</button>
+                    <button onclick="openSettings()" id="admin-settings-btn" class="btn-small btn-secondary hidden" style="margin-left: 5px;">⚙️ Settings</button>
                 </div>
             </div>
 
@@ -123,7 +150,7 @@
                         <div style="display: flex; gap: 10px;">
                             <select id="start-bread-select"></select>
                             <input type="number" id="start-bread-qty" placeholder="Qty" min="0">
-                            <button onclick="addStartInventory()" class="btn-primary" style="width: auto;">Add Leftover</button>
+                            <button onclick="addStartInventory()" class="btn-primary btn-small" style="width: auto;">Add Leftover</button>
                         </div>
                         <p><small>Click "End Shift" at 2PM to transfer stock to Afternoon.</small></p>
                         <button onclick="endMorningShift()" class="btn-secondary" style="margin-top: 10px;">End Morning Shift & Transfer Stock</button>
@@ -131,7 +158,7 @@
 
                     <!-- Inventory List -->
                     <div class="card">
-                        <h3>📦 Daily Inventory</h3>
+                        <h3>📦 Daily Inventory <span style="font-size:0.8em; font-weight:normal; color:#666;">(Click Qty to Edit)</span></h3>
                         <table id="inventory-table">
                             <thead>
                                 <tr>
@@ -158,9 +185,10 @@
                     <div class="card">
                         <h3>🛒 New Sale</h3>
                         <select id="pos-bread-select" onchange="updatePriceDisplay()"></select>
+                        
                         <div style="display: flex; gap: 10px; margin-top: 10px;">
                             <input type="number" id="pos-qty" placeholder="Qty" min="1" value="1">
-                            <button onclick="addToCart()" class="btn-primary">Add to Cart</button>
+                            <button onclick="addToCart()" class="btn-primary btn-small" style="width: auto;">Add</button>
                         </div>
                         <div id="price-display" style="margin-top: 5px; color: #666; font-size: 0.9em;"></div>
 
@@ -171,7 +199,26 @@
                         <div class="total-section">
                             Total: ₱<span id="cart-total">0.00</span>
                         </div>
-                        <button onclick="processSale()" class="btn-success" style="width: 100%; margin-top: 10px; font-size: 1.2em;">✅ Complete Sale</button>
+
+                        <!-- Payment Section -->
+                        <div class="payment-section">
+                            <label style="font-weight:bold; display:block; margin-bottom:5px;">Mode of Payment:</label>
+                            <div class="payment-methods">
+                                <button onclick="setPaymentMethod('cash')" id="btn-pay-cash" class="btn-secondary btn-small active-pay">Cash</button>
+                                <button onclick="setPaymentMethod('gcash')" id="btn-pay-gcash" class="btn-gcash btn-small">GCash</button>
+                            </div>
+                            
+                            <div id="cash-controls">
+                                <label>Amount Received:</label>
+                                <input type="number" id="amount-received" placeholder="₱ 0.00" oninput="calculateChange()">
+                                <div id="change-display" class="change-display">Change: ₱0.00</div>
+                            </div>
+                            <div id="gcash-controls" class="hidden">
+                                <small>Confirm GCash payment sent?</small>
+                            </div>
+
+                            <button onclick="processSale()" class="btn-success" style="width: 100%; margin-top: 15px; font-size: 1.1em;">✅ Complete Sale</button>
+                        </div>
                     </div>
 
                     <!-- Shift Summary -->
@@ -206,33 +253,63 @@
             <div class="tab-buttons">
                 <button onclick="switchTab('products')" class="btn-secondary">Products</button>
                 <button onclick="switchTab('employees')" class="btn-secondary">Employees</button>
+                <button onclick="switchTab('shifts')" class="btn-secondary">Shifts</button>
                 <button onclick="switchTab('logs')" class="btn-secondary">Logs & Reports</button>
             </div>
 
-            <div id="tab-products" class="tab-content">
+            <!-- Products Tab -->
+            <div id="tab-products" class="tab-content active">
                 <h3>Manage Products</h3>
-                <div style="display: flex; gap: 10px;">
+                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
                     <input type="text" id="new-prod-name" placeholder="Bread Name (e.g., Pandesal)">
                     <input type="number" id="new-prod-price" placeholder="Price (₱)" step="0.01">
-                    <button onclick="addProduct()" class="btn-primary" style="width: auto;">Add Product</button>
+                    <button onclick="addProduct()" class="btn-primary btn-small" style="width: auto;">Add Product</button>
                 </div>
                 <ul id="admin-product-list" style="list-style: none; padding: 0;"></ul>
             </div>
 
-            <div id="tab-employees" class="tab-content hidden">
+            <!-- Employees Tab -->
+            <div id="tab-employees" class="tab-content">
                 <h3>Manage Employees</h3>
-                <div style="display: flex; gap: 10px;">
+                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
                     <input type="text" id="new-emp-name" placeholder="Name">
                     <input type="text" id="new-emp-pass" placeholder="Password">
-                    <button onclick="addEmployee()" class="btn-primary" style="width: auto;">Add Employee</button>
+                    <button onclick="addEmployee()" class="btn-primary btn-small" style="width: auto;">Add Employee</button>
                 </div>
                 <ul id="admin-employee-list" style="list-style: none; padding: 0;"></ul>
             </div>
 
-            <div id="tab-logs" class="tab-content hidden">
+            <!-- Shifts Tab -->
+            <div id="tab-shifts" class="tab-content">
+                <h3>Manage Shifts</h3>
+                <p>Edit the start and end times for shifts.</p>
+                <div class="settings-row">
+                    <label>Morning Shift Name:</label>
+                    <input type="text" id="edit-shift-morning-name" value="Morning Shift (5am - 2pm)" onchange="updateShiftNames()">
+                </div>
+                <div class="settings-row">
+                    <label>Afternoon Shift Name:</label>
+                    <input type="text" id="edit-shift-afternoon-name" value="Afternoon Shift (2pm - 11pm)" onchange="updateShiftNames()">
+                </div>
+                <button onclick="saveShiftConfig()" class="btn-primary btn-small" style="margin-top:10px;">Save Shift Names</button>
+            </div>
+
+            <!-- Logs Tab -->
+            <div id="tab-logs" class="tab-content">
                 <h3>System Logs & Weekly Report</h3>
-                <button onclick="generateWeeklyCSV()" class="btn-primary">Download Weekly CSV Report</button>
-                <button onclick="resetDailyData()" class="btn-danger" style="margin-top: 10px;">Reset All Data (New Day)</button>
+                <button onclick="generateWeeklyCSV()" class="btn-primary btn-small" style="margin-bottom:10px;">Download Weekly CSV Report</button>
+                <button onclick="resetDailyData()" class="btn-danger btn-small" style="margin-top: 10px;">Reset All Data (New Day)</button>
+                
+                <h4 style="margin-top:20px;">Add New Baked Batch (Restock)</h4>
+                <div class="new-batch-section">
+                    <p><small>Use this to add stock for newly baked bread without making a sale.</small></p>
+                    <div style="display:flex; gap:10px;">
+                        <select id="batch-bread-select"></select>
+                        <input type="number" id="batch-qty" placeholder="Qty" min="1">
+                        <button onclick="addBatchStock()" class="btn-success btn-small" style="width:auto;">Add Stock</button>
+                    </div>
+                </div>
+
                 <div id="admin-logs-list" style="margin-top: 15px; max-height: 200px; overflow-y: auto; background: #f9f9f9; padding: 10px;"></div>
             </div>
         </div>
@@ -240,20 +317,25 @@
 
     <script>
         // --- DATA STRUCTURES & STATE ---
-        const DB_KEY = 'bakeshop_pos_db';
+        const DB_KEY = 'bakeshop_pos_db_v2'; // Updated key to clear old data if needed
         let db = {
             products: [],
             employees: [],
-            currentShift: 'morning', // 'morning' or 'afternoon'
-            shiftStatus: 'open', // 'open', 'endorsed', 'acknowledged'
-            inventory: {}, // { productId: { baked: 0, sold: 0, pulledOut: 0 } }
-            sales: [], // { id, date, items: [], total, shift, attendant }
+            currentShift: 'morning', 
+            shiftStatus: 'open', 
+            inventory: {}, 
+            sales: [], 
             logs: [],
-            adminPin: '1234' // Default PIN
+            adminPin: '1234',
+            shiftConfig: {
+                morning: 'Morning Shift (5am - 2pm)',
+                afternoon: 'Afternoon Shift (2pm - 11pm)'
+            }
         };
 
         let currentUser = null;
         let cart = [];
+        let currentPaymentMethod = 'cash';
 
         // --- INITIALIZATION ---
         window.onload = function() {
@@ -261,7 +343,7 @@
             updateDate();
             setInterval(updateDate, 60000);
             
-            // Check if there's an active session
+            // Check session
             const session = sessionStorage.getItem('currentUser');
             if(session) {
                 currentUser = JSON.parse(session);
@@ -279,7 +361,6 @@
             if(saved) {
                 db = JSON.parse(saved);
             } else {
-                // Seed default data if first time
                 seedDefaultData();
             }
         }
@@ -290,7 +371,6 @@
         }
 
         function seedDefaultData() {
-            // Default Products
             const defaults = [
                 { id: 1, name: 'Pandesal', price: 10 },
                 { id: 2, name: 'Whole Wheat Bread', price: 45 },
@@ -299,20 +379,19 @@
                 { id: 5, name: 'Pan de Sal (Special)', price: 12 }
             ];
             db.products = defaults;
-            
-            // Init Inventory
             db.inventory = {};
             defaults.forEach(p => {
                 db.inventory[p.id] = { baked: 0, sold: 0, pulledOut: 0 };
             });
-
-            // Default Admin
             db.adminPin = '1234';
             db.employees = [
                 { id: 1, name: 'Maria', pass: 'maria123', role: 'attendant' },
                 { id: 2, name: 'Juan', pass: 'juan123', role: 'attendant' }
             ];
-
+            db.shiftConfig = {
+                morning: 'Morning Shift (5am - 2pm)',
+                afternoon: 'Afternoon Shift (2pm - 11pm)'
+            };
             saveDB();
         }
 
@@ -320,8 +399,12 @@
         function showLoginInput(type) {
             document.getElementById('attendant-login-form').classList.add('hidden');
             document.getElementById('admin-login-form').classList.add('hidden');
-            if(type === 'attendant') document.getElementById('attendant-login-form').classList.remove('hidden');
-            else document.getElementById('admin-login-form').classList.remove('hidden');
+            if(type === 'attendant') {
+                document.getElementById('attendant-login-form').classList.remove('hidden');
+                populateShiftDropdown();
+            } else {
+                document.getElementById('admin-login-form').classList.remove('hidden');
+            }
         }
 
         function hideLoginForms() {
@@ -329,10 +412,23 @@
             document.getElementById('admin-login-form').classList.add('hidden');
         }
 
+        function populateShiftDropdown() {
+            const select = document.getElementById('attendant-shift-select');
+            select.innerHTML = '';
+            const opt1 = document.createElement('option');
+            opt1.value = 'morning';
+            opt1.text = db.shiftConfig.morning;
+            const opt2 = document.createElement('option');
+            opt2.value = 'afternoon';
+            opt2.text = db.shiftConfig.afternoon;
+            select.appendChild(opt1);
+            select.appendChild(opt2);
+        }
+
         function loginAttendant() {
             const user = document.getElementById('attendant-user').value;
             const pass = document.getElementById('attendant-pass').value;
-            const shift = document.getElementById('attendant-shift').value;
+            const shift = document.getElementById('attendant-shift-select').value;
             
             const emp = db.employees.find(e => e.name.toLowerCase() === user.toLowerCase() && e.pass === pass);
             if(emp) {
@@ -368,14 +464,12 @@
             document.getElementById('app-interface').classList.remove('hidden');
             document.getElementById('user-display').innerText = `${currentUser.name} (${currentUser.shift || 'Admin'})`;
             
-            // Show settings button only for admin
             if(currentUser.role === 'admin') {
                 document.getElementById('admin-settings-btn').classList.remove('hidden');
             } else {
                 document.getElementById('admin-settings-btn').classList.add('hidden');
             }
 
-            // Handle Shift Logic UI
             handleShiftUI();
             renderAll();
         }
@@ -385,26 +479,22 @@
             const endorseBtn = document.getElementById('btn-endorse');
             const ackBtn = document.getElementById('btn-acknowledge');
 
-            // Reset visibility
             startSection.classList.add('hidden');
             endorseBtn.classList.remove('hidden');
             ackBtn.classList.add('hidden');
 
-            if(currentUser.role === 'admin') return; // Admin sees everything
+            if(currentUser.role === 'admin') return; 
 
             if(currentUser.shift === 'morning') {
-                // Morning shift starts with empty inventory unless they add leftovers
-                // If inventory is empty, show start section
                 const hasStock = Object.values(db.inventory).some(i => i.baked > 0);
                 if(!hasStock && db.sales.length === 0) {
                     startSection.classList.remove('hidden');
                 }
             } else if (currentUser.shift === 'afternoon') {
-                // Afternoon shift acknowledges morning shift
                 if(db.shiftStatus === 'endorsed') {
                     ackBtn.classList.remove('hidden');
                 } else if (db.shiftStatus === 'acknowledged') {
-                    // Already open, just sell
+                    // Already open
                 }
             }
         }
@@ -425,10 +515,7 @@
         }
 
         function endMorningShift() {
-            // Calculate totals
             const morningSalesTotal = calculateShiftTotal('morning');
-            
-            // Endorse status
             db.shiftStatus = 'endorsed';
             logAction(`Morning Shift Ended by ${currentUser.name}. Total Sales: ₱${morningSalesTotal.toFixed(2)}`);
             saveDB();
@@ -474,6 +561,7 @@
             });
             
             renderCart();
+            document.getElementById('pos-qty').value = 1;
         }
 
         function renderCart() {
@@ -484,21 +572,24 @@
             cart.forEach(item => {
                 const itemTotal = item.price * item.qty;
                 total += itemTotal;
+                
+                // Subtotal row for each item
                 container.innerHTML += `
                     <div class="cart-item">
                         <div>
                             <strong>${item.name}</strong><br>
                             <small>₱${item.price} x ${item.qty}</small>
+                            <div class="subtotal-row">Subtotal: ₱${itemTotal.toFixed(2)}</div>
                         </div>
                         <div>
-                            <span>₱${itemTotal.toFixed(2)}</span>
-                            <button onclick="removeFromCart(${item.id})" style="background:none; border:none; color:red; font-weight:bold;">×</button>
+                            <button onclick="removeFromCart(${item.id})" style="background:none; border:none; color:red; font-weight:bold; font-size:1.2em;">×</button>
                         </div>
                     </div>
                 `;
             });
 
             document.getElementById('cart-total').innerText = total.toFixed(2);
+            calculateChange(); // Recalculate change if total changes
         }
 
         function removeFromCart(id) {
@@ -506,11 +597,51 @@
             renderCart();
         }
 
+        function setPaymentMethod(method) {
+            currentPaymentMethod = method;
+            document.getElementById('btn-pay-cash').classList.toggle('active-pay', method === 'cash');
+            document.getElementById('btn-pay-gcash').classList.toggle('active-pay', method === 'gcash');
+            
+            if(method === 'cash') {
+                document.getElementById('cash-controls').classList.remove('hidden');
+                document.getElementById('gcash-controls').classList.add('hidden');
+            } else {
+                document.getElementById('cash-controls').classList.add('hidden');
+                document.getElementById('gcash-controls').classList.remove('hidden');
+            }
+        }
+
+        function calculateChange() {
+            const total = parseFloat(document.getElementById('cart-total').innerText);
+            const received = parseFloat(document.getElementById('amount-received').value) || 0;
+            const change = received - total;
+            
+            const changeEl = document.getElementById('change-display');
+            if(received >= total) {
+                changeEl.innerText = `Change: ₱${change.toFixed(2)}`;
+                changeEl.style.color = 'var(--success)';
+            } else {
+                changeEl.innerText = `Short: ₱${Math.abs(change).toFixed(2)}`;
+                changeEl.style.color = 'var(--danger)';
+            }
+        }
+
         function processSale() {
             if(cart.length === 0) return;
 
             const total = parseFloat(document.getElementById('cart-total').innerText);
-            
+            let received = 0;
+            let change = 0;
+
+            if(currentPaymentMethod === 'cash') {
+                received = parseFloat(document.getElementById('amount-received').value) || 0;
+                if(received < total) {
+                    alert("Amount received is less than total!");
+                    return;
+                }
+                change = received - total;
+            }
+
             // Deduct inventory
             cart.forEach(item => {
                 db.inventory[item.productId].sold += item.qty;
@@ -523,15 +654,20 @@
                 items: [...cart],
                 total: total,
                 shift: currentUser.shift,
-                attendant: currentUser.name
+                attendant: currentUser.name,
+                paymentMethod: currentPaymentMethod,
+                amountReceived: received,
+                change: change
             };
             db.sales.push(sale);
 
-            logAction(`Sale: ₱${total.toFixed(2)} by ${currentUser.name}`);
+            logAction(`Sale: ₱${total.toFixed(2)} via ${currentPaymentMethod.toUpperCase()} by ${currentUser.name}`);
             
             cart = [];
+            document.getElementById('amount-received').value = '';
+            document.getElementById('change-display').innerText = 'Change: ₱0.00';
             renderCart();
-            renderAll(); // Refresh tables
+            renderAll();
         }
 
         // --- PULL OUT LOGIC (Recycling) ---
@@ -558,8 +694,8 @@
         }
 
         function switchTab(tabName) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-            document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.getElementById(`tab-${tabName}`).classList.add('active');
         }
 
         function addProduct() {
@@ -622,11 +758,38 @@
             }
         }
 
+        function updateShiftNames() {
+            db.shiftConfig.morning = document.getElementById('edit-shift-morning-name').value;
+            db.shiftConfig.afternoon = document.getElementById('edit-shift-afternoon-name').value;
+        }
+
+        function saveShiftConfig() {
+            updateShiftNames();
+            saveDB();
+            alert('Shift names updated!');
+            closeSettings();
+        }
+
+        // --- BATCH STOCK ENTRY ---
+        function addBatchStock() {
+            const prodId = parseInt(document.getElementById('batch-bread-select').value);
+            const qty = parseInt(document.getElementById('batch-qty').value);
+            
+            if(prodId && qty > 0) {
+                db.inventory[prodId].baked += qty;
+                logAction(`New Batch: Added ${qty} units of ${getProductName(prodId)}.`);
+                saveDB();
+                document.getElementById('batch-qty').value = '';
+                alert('Stock Added Successfully!');
+                renderAdminLists(); // Refresh lists
+            }
+        }
+
         // --- RENDERING ---
 
         function renderAll() {
             // Populate Selects
-            const selects = [document.getElementById('pos-bread-select'), document.getElementById('start-bread-select')];
+            const selects = [document.getElementById('pos-bread-select'), document.getElementById('start-bread-select'), document.getElementById('batch-bread-select')];
             selects.forEach(select => {
                 if(!select) return;
                 const currentVal = select.value;
@@ -637,16 +800,20 @@
                 select.value = currentVal;
             });
 
-            // Render Inventory Table
+            // Render Inventory Table with Editable Quantities
             const tbody = document.getElementById('inventory-body');
             tbody.innerHTML = '';
             db.products.forEach(p => {
                 const inv = db.inventory[p.id];
                 const available = inv.baked - inv.sold - inv.pulledOut;
+                
+                // Create editable input for Baked Qty
+                const bakedInput = `<input type="number" class="editable-qty" value="${inv.baked}" onchange="updateInventoryQty(${p.id}, 'baked', this.value)" min="0">`;
+                
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>${p.name}</td>
-                    <td>${inv.baked}</td>
+                    <td>${bakedInput}</td>
                     <td>${inv.sold}</td>
                     <td class="${available < 5 ? 'stock-low' : ''}">${available}</td>
                     <td>
@@ -659,7 +826,6 @@
             // Render Sales Log
             const salesLog = document.getElementById('sales-log');
             salesLog.innerHTML = '';
-            // Show last 10 sales
             const recentSales = db.sales.slice(-10).reverse();
             recentSales.forEach(s => {
                 salesLog.innerHTML += `
@@ -680,6 +846,15 @@
             document.getElementById('grand-total-sales').innerText = grandTotal.toFixed(2);
         }
 
+        // Helper to update inventory directly from table
+        function updateInventoryQty(productId, field, newValue) {
+            const val = parseFloat(newValue);
+            if(val >= 0) {
+                db.inventory[productId][field] = val;
+                saveDB();
+            }
+        }
+
         function renderAdminLists() {
             // Products
             const prodList = document.getElementById('admin-product-list');
@@ -688,7 +863,7 @@
                 prodList.innerHTML += `
                     <li class="settings-row">
                         <span><strong>${p.name}</strong> - ₱${p.price}</span>
-                        <button onclick="removeProduct(${p.id})" class="btn-danger" style="width:auto;">Remove</button>
+                        <button onclick="removeProduct(${p.id})" class="btn-danger btn-small" style="width:auto;">Remove</button>
                     </li>
                 `;
             });
@@ -700,7 +875,7 @@
                 empList.innerHTML += `
                     <li class="settings-row">
                         <span><strong>${e.name}</strong> (Pass: ${e.pass})</span>
-                        <button onclick="removeEmployee(${e.id})" class="btn-danger" style="width:auto;">Remove</button>
+                        <button onclick="removeEmployee(${e.id})" class="btn-danger btn-small" style="width:auto;">Remove</button>
                     </li>
                 `;
             });
@@ -723,7 +898,6 @@
 
         function logAction(action) {
             db.logs.push({ timestamp: new Date().toISOString(), action });
-            // Keep logs manageable
             if(db.logs.length > 1000) db.logs = db.logs.slice(-500);
             saveDB();
         }
@@ -741,15 +915,14 @@
         // --- EXPORT & SYNC ---
 
         function generateWeeklyCSV() {
-            // Create CSV content
             let csvContent = "data:text/csv;charset=utf-8,";
-            csvContent += "Date,Time,Attendant,Shift,Item,Quantity,Price,Total\n";
+            csvContent += "Date,Time,Attendant,Shift,Item,Quantity,Price,Total,Payment Method\n";
             
             db.sales.forEach(s => {
                 s.items.forEach(item => {
                     const date = new Date(s.date).toLocaleDateString();
                     const time = new Date(s.date).toLocaleTimeString();
-                    csvContent += `${date},${time},${s.attendant},${s.shift},${item.name},${item.qty},${item.price},${item.qty * item.price}\n`;
+                    csvContent += `${date},${time},${s.attendant},${s.shift},${item.name},${item.qty},${item.price},${item.qty * item.price},${s.paymentMethod}\n`;
                 });
             });
 
@@ -765,11 +938,6 @@
             saveDB();
         }
 
-        // Simulate sending email via CSV download since pure JS doesn't have SMTP
-        // In a real app, you'd use a backend service like SendGrid or Firebase Functions
-        // For this offline app, we trigger the download as the "sync" mechanism
-        
-        // Auto-check for online status and suggest sync
         window.addEventListener('online', () => {
             alert("You are back online! Consider downloading the weekly report to email it.");
         });
