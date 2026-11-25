@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bakeshop POS - Enhanced</title>
+    <title>Bakeshop POS - Professional Edition</title>
     <style>
         :root {
-            --primary: #d35400;
-            --secondary: #f39c12;
-            --bg: #fdf6e3;
+            --primary: #d35400; /* Burnt Orange */
+            --secondary: #f39c12; /* Golden Yellow */
+            --bg: #fdf6e3; /* Creamy White */
             --text: #2c3e50;
             --white: #ffffff;
             --danger: #e74c3c;
@@ -34,6 +34,7 @@
         .btn-danger { background-color: var(--danger); color: white; border: none; }
         .btn-success { background-color: var(--success); color: white; border: none; }
         .btn-outline { background: transparent; border: 1px solid var(--primary); color: var(--primary); }
+        .btn-small { width: auto; padding: 5px 10px; font-size: 0.8em; }
 
         /* Dashboard Grid */
         .dashboard-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 15px; }
@@ -46,7 +47,8 @@
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; }
         th { background-color: #f8f9fa; }
-        .pullout-btn { background-color: var(--danger); color: white; padding: 5px 10px; font-size: 0.8em; border: none; border-radius: 3px; cursor: pointer; }
+        .pullout-btn { background-color: var(--danger); color: white; padding: 5px 10px; font-size: 0.8em; border: none; border-radius: 3px; cursor: pointer; margin-right: 5px; }
+        .edit-stock-btn { background-color: var(--secondary); color: var(--text); padding: 5px 10px; font-size: 0.8em; border: none; border-radius: 3px; cursor: pointer; }
         .stock-low { color: var(--danger); font-weight: bold; }
 
         /* Cart / Sales */
@@ -96,6 +98,10 @@
         .sub-tab-buttons { display: flex; gap: 10px; margin-bottom: 15px; }
         .sub-tab-btn { flex: 1; padding: 8px; border: 1px solid #ddd; background: #fff; cursor: pointer; border-radius: 4px; }
         .sub-tab-btn.active { background: var(--secondary); color: var(--text); font-weight: bold; }
+
+        /* Product Management Form */
+        .product-form { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+        .product-form input { flex: 1; min-width: 100px; }
     </style>
 </head>
 <body>
@@ -209,6 +215,7 @@
                         <div id="shift-controls" style="margin-top: 15px;">
                             <button onclick="endorseShift()" id="btn-endorse" class="btn-secondary">Endorse Shift</button>
                             <button onclick="acknowledgeShift()" id="btn-acknowledge" class="btn-primary hidden">Acknowledge & Open</button>
+                            <button onclick="endAfternoonShift()" id="btn-end-afternoon" class="btn-danger hidden">Close Day</button>
                         </div>
                     </div>
 
@@ -256,10 +263,11 @@
 
             <!-- Products Tab -->
             <div id="tab-products" class="tab-content">
-                <h3>Manage Products</h3>
-                <div style="display: flex; gap: 10px;">
+                <h3>Manage Products & Batches</h3>
+                <div class="product-form">
                     <input type="text" id="new-prod-name" placeholder="Bread Name">
                     <input type="number" id="new-prod-price" placeholder="Price (₱)" step="0.01">
+                    <input type="number" id="new-prod-qty" placeholder="Initial Qty Baked" min="0">
                     <button onclick="addProduct()" class="btn-primary" style="width: auto;">Add Product</button>
                 </div>
                 <ul id="admin-product-list" style="list-style: none; padding: 0;"></ul>
@@ -317,7 +325,7 @@
 
     <script>
         // --- DATA STRUCTURES & STATE ---
-        const DB_KEY = 'bakeshop_pos_db_v3';
+        const DB_KEY = 'bakeshop_pos_db_v4';
         let db = {
             products: [],
             employees: [],
@@ -372,11 +380,11 @@
 
         function seedDefaultData() {
             const defaults = [
-                { id: 1, name: 'Pandesal', price: 10 },
-                { id: 2, name: 'Whole Wheat Bread', price: 45 },
-                { id: 3, name: 'French Bread', price: 35 },
-                { id: 4, name: 'Chocolate Bread', price: 15 },
-                { id: 5, name: 'Pan de Sal (Special)', price: 12 }
+                { id: 1, name: 'Pandesal', price: 10, qtyBaked: 0 },
+                { id: 2, name: 'Whole Wheat Bread', price: 45, qtyBaked: 0 },
+                { id: 3, name: 'French Bread', price: 35, qtyBaked: 0 },
+                { id: 4, name: 'Chocolate Bread', price: 15, qtyBaked: 0 },
+                { id: 5, name: 'Pan de Sal (Special)', price: 12, qtyBaked: 0 }
             ];
             db.products = defaults;
             db.inventory = {};
@@ -462,10 +470,12 @@
             const startSection = document.getElementById('start-day-section');
             const endorseBtn = document.getElementById('btn-endorse');
             const ackBtn = document.getElementById('btn-acknowledge');
+            const endAfternoonBtn = document.getElementById('btn-end-afternoon');
 
             startSection.classList.add('hidden');
             endorseBtn.classList.remove('hidden');
             ackBtn.classList.add('hidden');
+            endAfternoonBtn.classList.add('hidden');
 
             if(currentUser.role === 'admin') return;
 
@@ -481,6 +491,9 @@
             else if (currentUser.shift === 'afternoon') {
                 if(db.shiftStatus === 'endorsed') {
                     ackBtn.classList.remove('hidden');
+                } else if (db.shiftStatus === 'acknowledged') {
+                    // Show close day button for afternoon
+                    endAfternoonBtn.classList.remove('hidden');
                 }
             }
         }
@@ -673,15 +686,17 @@
         function addProduct() {
             const name = document.getElementById('new-prod-name').value;
             const price = parseFloat(document.getElementById('new-prod-price').value);
+            const qty = parseInt(document.getElementById('new-prod-qty').value) || 0;
             
             if(name && price) {
                 const newId = Date.now();
-                db.products.push({ id: newId, name, price });
-                db.inventory[newId] = { baked: 0, sold: 0, pulledOut: 0 };
+                db.products.push({ id: newId, name, price, qtyBaked: qty });
+                db.inventory[newId] = { baked: qty, sold: 0, pulledOut: 0 };
                 saveDB();
                 renderAdminLists();
                 document.getElementById('new-prod-name').value = '';
                 document.getElementById('new-prod-price').value = '';
+                document.getElementById('new-prod-qty').value = '';
             }
         }
 
@@ -689,6 +704,17 @@
             if(confirm('Remove this product?')) {
                 db.products = db.products.filter(p => p.id !== id);
                 delete db.inventory[id];
+                saveDB();
+                renderAdminLists();
+            }
+        }
+
+        function editProductStock(id) {
+            const currentStock = db.inventory[id].baked;
+            const newStock = prompt(`Current Baked Qty for ${getProductName(id)}: ${currentStock}\nEnter new total baked quantity:`, currentStock);
+            
+            if(newStock !== null && !isNaN(newStock)) {
+                db.inventory[id].baked = parseInt(newStock);
                 saveDB();
                 renderAdminLists();
             }
@@ -919,6 +945,7 @@
                     <td>${inv.sold}</td>
                     <td class="${available < 5 ? 'stock-low' : ''}">${available}</td>
                     <td>
+                        <button class="edit-stock-btn" onclick="editProductStock(${p.id})">Edit Qty</button>
                         <button class="pullout-btn" onclick="pullOutBread(${p.id})">Pull Out</button>
                     </td>
                 `;
@@ -955,8 +982,9 @@
             db.products.forEach(p => {
                 prodList.innerHTML += `
                     <li class="settings-row">
-                        <span><strong>${p.name}</strong> - ₱${p.price}</span>
-                        <button onclick="removeProduct(${p.id})" class="btn-danger" style="width:auto;">Remove</button>
+                        <span><strong>${p.name}</strong> - ₱${p.price} (Baked: ${db.inventory[p.id].baked})</span>
+                        <button onclick="editProductStock(${p.id})" class="btn-secondary btn-small">Edit Qty</button>
+                        <button onclick="removeProduct(${p.id})" class="btn-danger btn-small">Remove</button>
                     </li>
                 `;
             });
